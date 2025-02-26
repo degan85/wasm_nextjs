@@ -1,0 +1,69 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# 🔥 Rust 관련 빌드 파일 제외
+/target/
+/pkg/
+/Cargo.lock
+
+# ⚙️ wasm-pack 빌드 파일
+/pkg/
+/rust-wasm/pkg/
+/rust-wasm/rust_wasm/pkg/
+
+# 🏗️ Next.js 빌드 파일 제외
+/.next/
+/.out/
+/.vercel/
+/.netlify/
+
+# 🗂️ 환경 설정 파일 제외
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 💾 macOS 및 OS 관련 파일
+.DS_Store
+Thumbs.db
+
+# 📜 로그 및 임시 파일
+*.log
+.npmrc
+.idea/
+.vscode/
+*.swp

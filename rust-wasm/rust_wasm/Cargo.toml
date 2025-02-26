@@ -1,0 +1,14 @@
+[package]
+name = "rust_wasm"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+serde = { version = "1.0", features = ["derive"] }
+serde-wasm-bindgen = "0.4"
+rustfft = "6.1.0" # FFT 라이브러리 추가
+num-complex = "0.4" # 복소수 연산 라이브러리
