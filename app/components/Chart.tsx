@@ -14,7 +14,7 @@ import {
   ArcElement,
 } from 'chart.js';
 import { Bar, Line, Doughnut } from 'react-chartjs-2';
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState, useRef } from 'react';
 
 ChartJS.register(
   CategoryScale,
@@ -49,6 +49,9 @@ interface ChartProps {
 }
 
 const Chart = ({ dateStats, departmentStats }: ChartProps) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [gridWidth, setGridWidth] = useState(0);
+
   const latestMonth = useMemo(() => {
     const months = dateStats.map(stat => stat.get('month'));
     return months.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
@@ -200,49 +203,30 @@ const Chart = ({ dateStats, departmentStats }: ChartProps) => {
   };
 
   const departmentOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    height: 500,
+    indexAxis: 'y' as const,
     plugins: {
       legend: {
-        position: 'right' as const,
-        align: 'start',
-        labels: {
-          padding: 20,
-          font: { size: 14 }
-        }
-      }
-    },
-    scales: {
-      x: { 
-        stacked: true,
-        ticks: {
-          maxRotation: 45,
-          minRotation: 45,
-          font: {
-            size: 13,
-            weight: '500'
-          }
-        },
-        grid: { display: false }
+        position: 'top' as const,
       },
-      y: { 
-        stacked: true, 
-        beginAtZero: true,
-        max: 60,
-        ticks: {
-          stepSize: 10,
-          font: {
-            size: 14,
-            weight: '500'
-          },
-          padding: 12
-        },
+    },
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: {
+        stacked: true,
         grid: {
-          color: 'rgba(0, 0, 0, 0.05)'
+          display: false
+        }
+      },
+      y: {
+        stacked: true,
+        grid: {
+          display: true
         }
       }
     },
+    barPercentage: 0.7,
+    categoryPercentage: 1,
     animation: {
       duration: 1500,
       easing: 'easeInOutQuart',
@@ -255,110 +239,135 @@ const Chart = ({ dateStats, departmentStats }: ChartProps) => {
   };
 
   useEffect(() => {
-    console.log('Window width:', window.innerWidth);
-    console.log('Grid container width:', document.querySelector('.grid')?.clientWidth);
-    console.log('Chart containers:', document.querySelectorAll('.bg-white').length);
-    
-    const chartContainers = document.querySelectorAll('.bg-white');
-    chartContainers.forEach((container, idx) => {
-      console.log(`Chart ${idx + 1} dimensions:`, {
-        width: container.clientWidth,
-        height: container.clientHeight,
-        aspectRatio: container.clientWidth / container.clientHeight
-      });
-    });
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const width = containerRef.current.offsetWidth;
+        setGridWidth(width);
+        console.log('=== Chart Dimensions ===');
+        console.log('Window Width:', window.innerWidth);
+        console.log('Container Width:', width);
+        console.log('Grid Layout:', window.innerWidth >= 1024 ? '2x2' : '1x4');
+        console.log('Breakpoint:', window.innerWidth >= 1024 ? 'Desktop' : 'Mobile');
+        console.log('=====================');
+      }
+    };
+
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    return () => window.removeEventListener('resize', updateDimensions);
   }, []);
+
+  const isDesktop = window.innerWidth >= 1024;
+
+  const gridContainerStyle = {
+    display: 'grid',
+    gridTemplateColumns: isDesktop ? 'repeat(2, 1fr)' : '1fr',
+    gridTemplateRows: isDesktop ? 'repeat(2, minmax(500px, 600px))' : 'repeat(4, minmax(450px, 500px))',
+    gap: '1.5rem',
+    width: '100%',
+    padding: '1rem',
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-[1600px] mx-auto overflow-hidden">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          {/* 월별 추이 */}
-          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 w-full" style={{ height: '500px' }}>
-            <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">월별 요청 처리 현황</h2>
-            <div style={{ height: 'calc(100% - 40px)', width: '100%', position: 'relative' }}>
-              {monthlyData.labels?.length > 0 && (
-                <Bar 
-                  options={{
-                    ...monthlyOptions,
-                    responsive: true,
-                    maintainAspectRatio: false,
-                  }} 
-                  data={monthlyData}
-                />
-              )}
-            </div>
+      <div 
+        ref={containerRef}
+        className="max-w-[1600px] mx-auto"
+        style={gridContainerStyle}
+      >
+        {/* 월별 추이 */}
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 flex flex-col" style={{ height: '100%' }}>
+          <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-6">시간별 처리량</h2>
+          <div className="flex-1 relative w-full">
+            {monthlyData.labels?.length > 0 && (
+              <Bar 
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      position: 'top' as const,
+                    }
+                  },
+                }}
+                data={monthlyData}
+                style={{ position: 'absolute', width: '100%', height: '100%' }}
+              />
+            )}
           </div>
+        </div>
 
-          {/* 부서별 상세 차트 */}
-          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 w-full" style={{ height: '500px' }}>
-            <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">부서별 상세 현황</h2>
-            <div style={{ height: 'calc(100% - 40px)', width: '100%', position: 'relative' }}>
-              {departmentData.labels?.length > 0 && (
-                <Bar 
-                  options={{
-                    ...departmentOptions,
-                    responsive: true,
-                    maintainAspectRatio: false,
-                  }}
-                  data={departmentData}
-                />
-              )}
-            </div>
+        {/* 부서별 상세 차트 */}
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 flex flex-col" style={{ height: '100%' }}>
+          <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-6">부서별 상세 현황</h2>
+          <div className="flex-1 relative w-full">
+            {departmentData.labels?.length > 0 && (
+              <Bar 
+                options={{
+                  ...departmentOptions,
+                  responsive: true,
+                  maintainAspectRatio: false,
+                }}
+                data={departmentData}
+                style={{ position: 'absolute', width: '100%', height: '100%' }}
+              />
+            )}
           </div>
+        </div>
 
-          {/* 처리율 추이 */}
-          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 w-full" style={{ height: '500px' }}>
-            <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">처리율 추이</h2>
-            <div style={{ height: 'calc(100% - 40px)', width: '100%', position: 'relative' }}>
-              {monthlyData.labels?.length > 0 && (
-                <Line 
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                  }}
-                  data={{
-                    labels: monthlyData.labels,
-                    datasets: [{
-                      label: '처리율',
-                      data: monthlyData.labels.map((_, i) => {
-                        const completed = monthlyData.datasets[0].data[i];
-                        const total = monthlyData.datasets[1].data[i];
-                        return total ? (completed / total * 100) : 0;
-                      }),
-                      borderColor: 'rgba(75, 192, 192, 1)',
-                      backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                      tension: 0.4,
-                      fill: true
-                    }]
-                  }}
-                />
-              )}
-            </div>
+        {/* 처리율 추이 */}
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 flex flex-col" style={{ height: '100%' }}>
+          <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-6">처리율 추이</h2>
+          <div className="flex-1 relative w-full">
+            {monthlyData.labels?.length > 0 && (
+              <Line 
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                }}
+                data={{
+                  labels: monthlyData.labels,
+                  datasets: [{
+                    label: '처리율',
+                    data: monthlyData.labels.map((_, i) => {
+                      const completed = monthlyData.datasets[0].data[i];
+                      const total = monthlyData.datasets[1].data[i];
+                      return total ? (completed / total * 100) : 0;
+                    }),
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.4,
+                    fill: true
+                  }]
+                }}
+                style={{ position: 'absolute', width: '100%', height: '100%' }}
+              />
+            )}
           </div>
+        </div>
 
-          {/* 상태 분포 */}
-          <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 w-full" style={{ height: '500px' }}>
-            <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-4">상태별 분포</h2>
-            <div style={{ height: 'calc(100% - 40px)', width: '100%', position: 'relative' }}>
-              {departmentData.datasets.length > 0 && (
-                <Doughnut
-                  options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                  }}
-                  data={{
-                    labels: departmentData.datasets.map(ds => ds.label),
-                    datasets: [{
-                      data: departmentData.datasets.map(ds => 
-                        ds.data.reduce((a, b) => a + b, 0)
-                      ),
-                      backgroundColor: departmentData.datasets.map(ds => ds.backgroundColor)
-                    }]
-                  }}
-                />
-              )}
-            </div>
+        {/* 상태 분포 */}
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 flex flex-col" style={{ height: '100%' }}>
+          <h2 className="text-base sm:text-lg font-semibold text-gray-800 mb-6">상태별 분포</h2>
+          <div className="flex-1 relative w-full">
+            {departmentData.datasets.length > 0 && (
+              <Doughnut
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                }}
+                data={{
+                  labels: departmentData.datasets.map(ds => ds.label),
+                  datasets: [{
+                    data: departmentData.datasets.map(ds => 
+                      ds.data.reduce((a, b) => a + b, 0)
+                    ),
+                    backgroundColor: departmentData.datasets.map(ds => ds.backgroundColor)
+                  }]
+                }}
+                style={{ position: 'absolute', width: '100%', height: '100%' }}
+              />
+            )}
           </div>
         </div>
       </div>
